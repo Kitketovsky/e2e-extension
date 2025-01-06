@@ -1,0 +1,112 @@
+import type {
+  MWHeadwordInformation,
+  MWPronunciationSound
+} from "~types/mw/common"
+import type { MWDictionaryResponse } from "~types/mw/dictionary"
+import type { MWThesaurusResponse } from "~types/mw/thesaurus"
+
+type ApiType = "collegiate" | "thesaurus"
+
+export class MerriamWebster {
+  constructor() {}
+
+  static #createAudioLink(headwordInfo: MWHeadwordInformation) {
+    // Supported formats: mp3, wav, ogg
+    const audioFormat = "mp3"
+
+    if (!headwordInfo.prs || !headwordInfo.prs[0].sound) {
+      return null
+    }
+
+    const subdirectory = this.#getAudioSubdirectory(headwordInfo.prs[0].sound)
+
+    return `https://media.merriam-webster.com/audio/prons/en/us/mp3/${subdirectory}/${headwordInfo.prs[0].sound.audio}.${audioFormat}`
+  }
+
+  static #getAudioSubdirectory(sound: MWPronunciationSound) {
+    if (sound.audio.startsWith("bix")) {
+      return "bix"
+    }
+
+    if (sound.audio.startsWith("gg")) {
+      return "gg"
+    }
+
+    if (sound.audio[0].match(/^[^a-zA-Z]+$/)) {
+      return "number"
+    }
+
+    return sound.audio[0]
+  }
+
+  static async #getSelectedLexiconWordInformation<T>(
+    word: string,
+    api: ApiType
+  ) {
+    const API_KEY =
+      api === "collegiate"
+        ? process.env.PLASMO_PUBLIC_MW_DICTIONARY
+        : process.env.PLASMO_PUBLIC_MW_THESAURUS
+
+    const response = await fetch(
+      `https://www.dictionaryapi.com/api/v3/references/${api}/json/${word}?key=${API_KEY}`
+    )
+
+    // TODO: error handling
+
+    const data = await response.json()
+
+    return data as T
+  }
+
+  static #transformDictionary(dictionary: MWDictionaryResponse) {
+    return dictionary.map(({ fl, hwi, et }) => ({
+      word: hwi.hw,
+      part: fl,
+      pronunciation: {
+        transcription: hwi.prs ? hwi.prs[0].mw : null,
+        audioUrl: this.#createAudioLink(hwi)
+      },
+      et: et ? et[0][1] : null
+    }))
+  }
+
+  static #transformThesaurus(thesaurus: MWThesaurusResponse) {
+    // TODO: definitions, examples, synonyms and antonyms from 'def' property
+    // TODO: filter all the words that doesn't contain word itself (searching 'class' in thesaurus it pops up the word 'set')
+
+    return thesaurus.map(({ meta, fl, shortdef, hwi }) => ({
+      word: hwi.hw,
+      part: fl,
+      synonyms: meta.syns.flat(),
+      antonyms: meta.ants.flat(),
+      shortdef
+    }))
+  }
+
+  static #transformResponse(
+    response: [MWDictionaryResponse, MWThesaurusResponse]
+  ) {
+    const [dictionary, thesaurus] = response
+
+    return {
+      ...this.#transformDictionary(dictionary),
+      words: this.#transformThesaurus(thesaurus)
+    }
+  }
+
+  static async getWordInformation(word: string) {
+    const response = await Promise.all([
+      this.#getSelectedLexiconWordInformation<MWDictionaryResponse>(
+        word,
+        "collegiate"
+      ),
+      this.#getSelectedLexiconWordInformation<MWThesaurusResponse>(
+        word,
+        "thesaurus"
+      )
+    ])
+
+    return this.#transformResponse(response)
+  }
+}

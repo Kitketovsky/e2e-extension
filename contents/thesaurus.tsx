@@ -13,12 +13,21 @@ export const getStyle: PlasmoGetStyle = () => {
 export const getInlineAnchor: PlasmoGetInlineAnchor = async () => document.body
 
 const Thesaurus = () => {
-  const [title, setTitle] = useState("E2E")
+  const [wordData, setWordData] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     function onWordDataReceived(message) {
-      if (message.type === MSG_TYPES.WORD_THESAURUS) {
-        setTitle(message.word)
+      if (message.type === MSG_TYPES.WORD_FETCH_SUCCESS) {
+        console.log("thesaurus", message)
+
+        setError(null)
+        setWordData(message.data)
+      }
+
+      if (message.type === MSG_TYPES.WORD_FETCH_FAIL) {
+        setWordData(null)
+        setError(message.error)
       }
     }
 
@@ -29,7 +38,15 @@ const Thesaurus = () => {
     }
   }, [])
 
-  return <button>{title}</button>
+  if (!wordData) {
+    return null
+  }
+
+  if (error) {
+    return <button style={{ color: "red" }}>{JSON.stringify(error)}</button>
+  }
+
+  return <button>{JSON.stringify(wordData)}</button>
 }
 
 export default Thesaurus

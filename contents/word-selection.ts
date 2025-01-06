@@ -15,6 +15,8 @@ window.addEventListener("mouseup", () => {
     return false
   }
 
+  console.log("word-selection", selectedText)
+
   chrome.runtime.sendMessage({
     type: MSG_TYPES.WORD_BACKGROUND,
     word: selectedText

@@ -1,5 +1,14 @@
+import type {
+  MWDefinitions,
+  MWFunctionalLabel,
+  MWShortDefinitions
+} from "./common"
+
 export type MWThesaurusResponse = {
   meta: MWThesaurusMeta
+  def: MWDefinitions
+  fl: MWFunctionalLabel
+  shortdef: MWShortDefinitions
 }[]
 
 type MWThesaurusMeta = {
