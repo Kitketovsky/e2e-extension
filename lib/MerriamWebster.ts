@@ -39,10 +39,15 @@ export class MerriamWebster {
     return sound.audio[0]
   }
 
-  static async #getSelectedLexiconWordInformation<T>(
+  static async #getSelectedLexiconWordInformation(
     word: string,
-    api: ApiType
-  ) {
+    api: "collegiate"
+  ): Promise<MWDictionaryResponse | string[]>
+  static async #getSelectedLexiconWordInformation(
+    word: string,
+    api: "thesaurus"
+  ): Promise<MWThesaurusResponse | string[]>
+  static async #getSelectedLexiconWordInformation(word: string, api: ApiType) {
     const API_KEY =
       api === "collegiate"
         ? process.env.PLASMO_PUBLIC_MW_DICTIONARY
@@ -52,35 +57,63 @@ export class MerriamWebster {
       `https://www.dictionaryapi.com/api/v3/references/${api}/json/${word}?key=${API_KEY}`
     )
 
-    // TODO: error handling
-
     const data = await response.json()
 
-    return data as T
+    return data
+  }
+
+  static #normalizeWord(word: string) {
+    return word.replaceAll("*", "")
   }
 
   static #transformDictionary(dictionary: MWDictionaryResponse) {
-    return dictionary.map(({ fl, hwi, et }) => ({
-      word: hwi.hw,
+    const [{ hwi, fl, et }] = dictionary
+
+    return {
+      word: this.#normalizeWord(hwi.hw),
       part: fl,
       pronunciation: {
         transcription: hwi.prs ? hwi.prs[0].mw : null,
         audioUrl: this.#createAudioLink(hwi)
       },
       et: et ? et[0][1] : null
-    }))
+    }
   }
 
   static #transformThesaurus(thesaurus: MWThesaurusResponse) {
     // TODO: definitions, examples, synonyms and antonyms from 'def' property
     // TODO: filter all the words that doesn't contain word itself (searching 'class' in thesaurus it pops up the word 'set')
 
-    return thesaurus.map(({ meta, fl, shortdef, hwi }) => ({
-      word: hwi.hw,
+    return thesaurus.map(({ fl, hwi, def }) => ({
+      word: this.#normalizeWord(hwi.hw),
       part: fl,
-      synonyms: meta.syns.flat(),
-      antonyms: meta.ants.flat(),
-      shortdef
+      definitions: def
+        .map((d) =>
+          d.sseq.flat().map((sence) => {
+            const [_, senceData] = sence
+
+            const verbalIllustration = senceData.dt.find(
+              (dt) => dt[0] === "vis"
+            )
+            const wordDefinition = senceData.dt.find((dt) => dt[0] === "text")
+
+            return {
+              def: wordDefinition ? wordDefinition[1] : null,
+              example: verbalIllustration
+                ? verbalIllustration[1].map((t) => t.t)
+                : null,
+              syns: senceData.sim_list
+                ? senceData.sim_list.flat().map((syn) => syn.wd)
+                : null,
+              ants: senceData.ant_list
+                ? senceData.ant_list.flat().map((ant) => ant.wd)
+                : senceData.opp_list
+                  ? senceData.opp_list.flat().map((opp) => opp.wd)
+                  : null
+            }
+          })
+        )
+        .flat()
     }))
   }
 
@@ -96,17 +129,28 @@ export class MerriamWebster {
   }
 
   static async getWordInformation(word: string) {
-    const response = await Promise.all([
-      this.#getSelectedLexiconWordInformation<MWDictionaryResponse>(
-        word,
-        "collegiate"
-      ),
-      this.#getSelectedLexiconWordInformation<MWThesaurusResponse>(
-        word,
-        "thesaurus"
-      )
+    const [dictionary, thesaurus] = await Promise.all([
+      this.#getSelectedLexiconWordInformation(word, "collegiate"),
+      this.#getSelectedLexiconWordInformation(word, "thesaurus")
     ])
 
-    return this.#transformResponse(response)
+    if (dictionary.every((v) => typeof v === "string")) {
+      return {
+        type: "suggestions" as const,
+        data: dictionary
+      }
+    }
+
+    if (thesaurus.every((v) => typeof v === "string")) {
+      return {
+        type: "suggestions" as const,
+        data: thesaurus
+      }
+    }
+
+    return {
+      type: "found" as const,
+      data: this.#transformResponse([dictionary, thesaurus])
+    }
   }
 }

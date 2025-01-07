@@ -1,5 +1,4 @@
 import type {
-  MWDefinitions,
   MWFunctionalLabel,
   MWHeadwordInformation,
   MWShortDefinitions
@@ -11,7 +10,7 @@ export type MWDictionaryResponse = {
   fl: MWFunctionalLabel
   et?: MWDictionaryEtymology
   shortdef: MWShortDefinitions
-  def: MWDefinitions
+  def: MWDictionaryDefinitions
 }[]
 
 type MWDictionaryWordMeta = {
@@ -30,3 +29,11 @@ type MWDictionaryEtymology = (
 )[]
 type MWDictionaryEtymologyContent = ["text", string]
 type MWDictionaryEtymologySupplementalNote = ["et-snote", ["t", string]]
+
+type MWDictionaryDefinitions = [
+  "sense",
+  {
+    sn: string
+    dt: [["text", string], ["vis", { t: string }[]]]
+  }
+][][]

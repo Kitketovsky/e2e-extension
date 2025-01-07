@@ -21,16 +21,3 @@ export type MWPronunciationSound = {
 export type MWFunctionalLabel = string
 
 export type MWShortDefinitions = string[]
-
-export type MWDefinitions = MWSenseSequence[]
-
-type MWSenseSequence = MWSense[]
-type MWSense = [
-  "sense",
-  {
-    sn: string
-    dt: MWDefiningText
-  }
-]
-type MWDefiningText = [["text", string], MWVerbalIllustration]
-type MWVerbalIllustration = ["vis", { t: string }]

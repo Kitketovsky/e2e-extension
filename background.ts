@@ -6,11 +6,20 @@ chrome.runtime.onMessage.addListener((message) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs.length > 0 && tabs[0].id) {
         MerriamWebster.getWordInformation(message.word)
-          .then((data) => {
-            chrome.tabs.sendMessage(tabs[0].id, {
-              type: MSG_TYPES.WORD_FETCH_SUCCESS,
-              data
-            })
+          .then((res) => {
+            if (res.type === "suggestions") {
+              chrome.tabs.sendMessage(tabs[0].id, {
+                type: MSG_TYPES.WORD_SUGGESTIONS,
+                data: res.data
+              })
+            }
+
+            if (res.type === "found") {
+              chrome.tabs.sendMessage(tabs[0].id, {
+                type: MSG_TYPES.WORD_FETCH_SUCCESS,
+                data: res.data
+              })
+            }
           })
           .catch((error) => {
             chrome.tabs.sendMessage(tabs[0].id, {
