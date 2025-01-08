@@ -1,4 +1,4 @@
-import { MSG_TYPES } from "./msg-types"
+import { MSG_TYPES } from "../const/msg-types"
 
 const wordRegex = /^[a-zA-Z]+$/
 

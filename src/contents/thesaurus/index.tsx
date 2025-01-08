@@ -1,14 +1,14 @@
-import styleText from "data-text:./thesaurus.css"
+import tailwindCssText from "data-text:~style.css"
 import type { PlasmoGetInlineAnchor, PlasmoGetStyle } from "plasmo"
 import { useEffect, useState } from "react"
 
-import { ErrorMessage } from "./components/ErrorMessage"
-import { Suggestions } from "./components/Suggestions"
-import { MSG_TYPES } from "./msg-types"
+import { MSG_TYPES } from "../../const/msg-types"
+import { ErrorMessage } from "./error-message"
+import { Suggestions } from "./suggestions"
 
 export const getStyle: PlasmoGetStyle = () => {
   const style = document.createElement("style")
-  style.textContent = styleText
+  style.textContent = tailwindCssText
   return style
 }
 
@@ -49,10 +49,6 @@ const Thesaurus = () => {
     }
   }, [])
 
-  if (!wordData) {
-    return null
-  }
-
   if (suggestions) {
     return <Suggestions suggestions={suggestions} />
   }
@@ -61,11 +57,15 @@ const Thesaurus = () => {
     return <ErrorMessage error={error} />
   }
 
-  return (
-    <div>
-      <span>{JSON.stringify(wordData)}</span>
-    </div>
-  )
+  if (wordData) {
+    return (
+      <div className="bg-white text-black p-4 rounded-xl z-50 flex fixed top-32 right-8">
+        <span>{JSON.stringify(wordData)}</span>
+      </div>
+    )
+  }
+
+  return null
 }
 
 export default Thesaurus

@@ -1,4 +1,4 @@
-import { MSG_TYPES } from "~contents/msg-types"
+import { MSG_TYPES } from "~const/msg-types"
 import { MerriamWebster } from "~lib/MerriamWebster"
 
 chrome.runtime.onMessage.addListener((message) => {
