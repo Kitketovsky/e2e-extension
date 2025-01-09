@@ -4,6 +4,7 @@ import type {
 } from "~types/mw/common"
 import type { MWDictionaryResponse } from "~types/mw/dictionary"
 import type { MWThesaurusResponse } from "~types/mw/thesaurus"
+import type { WordInformation } from "~types/word"
 
 type ApiType = "collegiate" | "thesaurus"
 
@@ -76,12 +77,11 @@ export class MerriamWebster {
         transcription: hwi.prs ? hwi.prs[0].mw : null,
         audioUrl: this.#createAudioLink(hwi)
       },
-      et: et ? et[0][1] : null
+      et: et && typeof et[0][1] === "string" ? et[0][1] : null
     }
   }
 
   static #transformThesaurus(thesaurus: MWThesaurusResponse) {
-    // TODO: definitions, examples, synonyms and antonyms from 'def' property
     // TODO: filter all the words that doesn't contain word itself (searching 'class' in thesaurus it pops up the word 'set')
 
     return thesaurus.map(({ fl, hwi, def }) => ({
@@ -99,7 +99,7 @@ export class MerriamWebster {
 
             return {
               def: wordDefinition ? wordDefinition[1] : null,
-              example: verbalIllustration
+              examples: verbalIllustration
                 ? verbalIllustration[1].map((t) => t.t)
                 : null,
               syns: senceData.sim_list
@@ -119,7 +119,7 @@ export class MerriamWebster {
 
   static #transformResponse(
     response: [MWDictionaryResponse, MWThesaurusResponse]
-  ) {
+  ): WordInformation {
     const [dictionary, thesaurus] = response
 
     return {

@@ -1,11 +1,12 @@
 import tailwindCssText from "data-text:~style.css"
 import type { PlasmoGetStyle } from "plasmo"
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 
-import { MSG_TYPES } from "../../const/msg-types"
+import { MerriamWebster } from "~lib/MerriamWebster"
+import type { WordInformation } from "~types/word"
+
 import { Content } from "./components/content"
 import { ErrorMessage } from "./components/error-message"
-import { Overlay } from "./components/overlay"
 import { Suggestions } from "./components/suggestions"
 
 export const getStyle: PlasmoGetStyle = () => {
@@ -14,57 +15,107 @@ export const getStyle: PlasmoGetStyle = () => {
   return style
 }
 
+const wordRegex = /^[a-zA-Z]+$/
+
 const Thesaurus = () => {
   const [open, setOpen] = useState(false)
 
-  const [wordData, setWordData] = useState<any>(null)
+  const [wordInformation, setWordInformation] =
+    useState<WordInformation | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<string[] | null>(null)
 
+  const [selectedText, setSelectedText] = useState<string | null>(null)
   const [position, setPosition] = useState<{ x: number; y: number } | null>(
     null
   )
 
+  const [overlayEl, setOverlayEl] = useState<HTMLDivElement>(null)
+
   useEffect(() => {
-    function resetData() {
-      setWordData(null)
-      setError(null)
-      setSuggestions(null)
-      setPosition(null)
-    }
-
-    function onWordDataReceived(message) {
-      resetData()
-
-      setOpen(true)
-      setPosition(message.position)
-
-      if (message.type === MSG_TYPES.WORD_FETCH_SUCCESS) {
-        setWordData(message.data)
-      }
-
-      if (message.type === MSG_TYPES.WORD_SUGGESTIONS) {
-        setSuggestions(message.data)
-      }
-
-      if (message.type === MSG_TYPES.WORD_FETCH_FAIL) {
-        setError(message.error)
+    function onClick(event) {
+      if (!overlayEl.contains(event.target)) {
+        setOpen(false)
       }
     }
 
-    chrome.runtime.onMessage.addListener(onWordDataReceived)
+    document.body.addEventListener("mousedown", onClick)
 
     return () => {
-      chrome.runtime.onMessage.removeListener(onWordDataReceived)
+      document.body.removeEventListener("mousedown", onClick)
     }
-  }, [])
+  }, [overlayEl])
+
+  useEffect(() => {
+    function onTextSelect() {
+      const selectedText = window.getSelection().toString().trim().toLowerCase()
+
+      const isWord = wordRegex.test(selectedText)
+
+      if (selectedText && isWord) {
+        const selection = window.getSelection()
+        const range = selection.getRangeAt(0)
+
+        const isSelectedInsideExtension = !open
+          ? false
+          : overlayEl.contains(range.endContainer.parentElement)
+
+        if (!isSelectedInsideExtension) {
+          const rect = range.getBoundingClientRect()
+
+          const initialPopupPosition = {
+            x: rect.x,
+            y: rect.y + rect.height
+          }
+
+          setPosition(initialPopupPosition)
+          setSelectedText(selectedText)
+        }
+      }
+    }
+
+    document.body.addEventListener("mouseup", onTextSelect)
+
+    return () => {
+      document.body.removeEventListener("mouseup", onTextSelect)
+    }
+  }, [open, overlayEl])
+
+  useEffect(() => {
+    if (position || selectedText) {
+      MerriamWebster.getWordInformation(selectedText)
+        .then((res) => {
+          if (res.type === "found") {
+            setWordInformation(res.data)
+          }
+
+          if (res.type === "suggestions") {
+            setSuggestions(res.data)
+          }
+        })
+        .catch((error) => {
+          setError(error?.message || "Error fetching word information")
+        })
+        .finally(() => {
+          setOpen(true)
+        })
+    }
+  }, [position, selectedText])
+
+  if (!open) {
+    return null
+  }
 
   return (
-    <Overlay open={open} onClose={() => setOpen(false)} position={position}>
+    <div
+      ref={setOverlayEl}
+      style={{ top: `${position.y}px`, left: `${position.x}px` }}
+      className="fixed bg-white overflow-hidden text-black p-4 rounded-xl z-50 flex max-w-[370px] max-h-[500px] min-w-[300px]"
+    >
       {!!suggestions && <Suggestions suggestions={suggestions} />}
       {!!error && <ErrorMessage error={error} />}
-      {!!wordData && <Content wordData={wordData} />}
-    </Overlay>
+      {!!wordInformation && <Content wordInformation={wordInformation} />}
+    </div>
   )
 }
 
