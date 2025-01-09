@@ -1,10 +1,12 @@
 import tailwindCssText from "data-text:~style.css"
-import type { PlasmoGetInlineAnchor, PlasmoGetStyle } from "plasmo"
+import type { PlasmoGetStyle } from "plasmo"
 import { useEffect, useState } from "react"
 
 import { MSG_TYPES } from "../../const/msg-types"
-import { ErrorMessage } from "./error-message"
-import { Suggestions } from "./suggestions"
+import { Content } from "./components/content"
+import { ErrorMessage } from "./components/error-message"
+import { Overlay } from "./components/overlay"
+import { Suggestions } from "./components/suggestions"
 
 export const getStyle: PlasmoGetStyle = () => {
   const style = document.createElement("style")
@@ -12,32 +14,40 @@ export const getStyle: PlasmoGetStyle = () => {
   return style
 }
 
-// FIXME: it's not positioned absolutely
-
-export const getInlineAnchor: PlasmoGetInlineAnchor = async () => document.body
-
 const Thesaurus = () => {
+  const [open, setOpen] = useState(false)
+
   const [wordData, setWordData] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<string[] | null>(null)
 
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(
+    null
+  )
+
   useEffect(() => {
+    function resetData() {
+      setWordData(null)
+      setError(null)
+      setSuggestions(null)
+      setPosition(null)
+    }
+
     function onWordDataReceived(message) {
+      resetData()
+
+      setOpen(true)
+      setPosition(message.position)
+
       if (message.type === MSG_TYPES.WORD_FETCH_SUCCESS) {
-        setError(null)
-        setSuggestions(null)
         setWordData(message.data)
       }
 
       if (message.type === MSG_TYPES.WORD_SUGGESTIONS) {
-        setError(null)
-        setSuggestions(null)
         setSuggestions(message.data)
       }
 
       if (message.type === MSG_TYPES.WORD_FETCH_FAIL) {
-        setWordData(null)
-        setSuggestions(null)
         setError(message.error)
       }
     }
@@ -49,23 +59,13 @@ const Thesaurus = () => {
     }
   }, [])
 
-  if (suggestions) {
-    return <Suggestions suggestions={suggestions} />
-  }
-
-  if (error) {
-    return <ErrorMessage error={error} />
-  }
-
-  if (wordData) {
-    return (
-      <div className="bg-white text-black p-4 rounded-xl z-50 flex fixed top-32 right-8">
-        <span>{JSON.stringify(wordData)}</span>
-      </div>
-    )
-  }
-
-  return null
+  return (
+    <Overlay open={open} onClose={() => setOpen(false)} position={position}>
+      {!!suggestions && <Suggestions suggestions={suggestions} />}
+      {!!error && <ErrorMessage error={error} />}
+      {!!wordData && <Content wordData={wordData} />}
+    </Overlay>
+  )
 }
 
 export default Thesaurus

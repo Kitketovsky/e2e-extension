@@ -15,10 +15,24 @@ window.addEventListener("mouseup", () => {
     return false
   }
 
+  const position = getWordPopupPosition()
+
   chrome.runtime.sendMessage({
     type: MSG_TYPES.WORD_BACKGROUND,
-    word: selectedText
+    data: selectedText,
+    position
   })
 })
+
+function getWordPopupPosition() {
+  const selection = window.getSelection()
+  const range = selection.getRangeAt(0)
+  const rect = range.getBoundingClientRect()
+
+  return {
+    x: rect.x,
+    y: rect.y + rect.height
+  }
+}
 
 export {}
