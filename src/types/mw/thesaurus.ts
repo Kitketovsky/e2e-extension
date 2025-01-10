@@ -34,7 +34,7 @@ type MWThesaurusDefinitions = {
       sn: string
       // tags in dt: bnw, ca, ri, snote, uns, or vis
       dt: [["text", string], ["vis", { t: string }[]]]
-      sim_list?: MWThesaurusList
+      syn_list?: MWThesaurusList
       rel_list?: MWThesaurusList
       near_list?: MWThesaurusList
       ant_list?: MWThesaurusList

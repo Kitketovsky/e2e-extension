@@ -82,39 +82,39 @@ export class MerriamWebster {
   }
 
   static #transformThesaurus(thesaurus: MWThesaurusResponse) {
-    // TODO: filter all the words that doesn't contain word itself (searching 'class' in thesaurus it pops up the word 'set')
+    return thesaurus
+      .map(({ fl, hwi, def }) => ({
+        word: this.#normalizeWord(hwi.hw),
+        part: fl,
+        definitions: def
+          .map((d) =>
+            d.sseq.flat().map((sence) => {
+              const [_, senceData] = sence
 
-    return thesaurus.map(({ fl, hwi, def }) => ({
-      word: this.#normalizeWord(hwi.hw),
-      part: fl,
-      definitions: def
-        .map((d) =>
-          d.sseq.flat().map((sence) => {
-            const [_, senceData] = sence
+              const verbalIllustration = senceData.dt.find(
+                (dt) => dt[0] === "vis"
+              )
+              const wordDefinition = senceData.dt.find((dt) => dt[0] === "text")
 
-            const verbalIllustration = senceData.dt.find(
-              (dt) => dt[0] === "vis"
-            )
-            const wordDefinition = senceData.dt.find((dt) => dt[0] === "text")
-
-            return {
-              def: wordDefinition ? wordDefinition[1] : null,
-              examples: verbalIllustration
-                ? verbalIllustration[1].map((t) => t.t)
-                : null,
-              syns: senceData.sim_list
-                ? senceData.sim_list.flat().map((syn) => syn.wd)
-                : null,
-              ants: senceData.ant_list
-                ? senceData.ant_list.flat().map((ant) => ant.wd)
-                : senceData.opp_list
-                  ? senceData.opp_list.flat().map((opp) => opp.wd)
-                  : null
-            }
-          })
-        )
-        .flat()
-    }))
+              return {
+                def: wordDefinition ? wordDefinition[1] : null,
+                examples: verbalIllustration
+                  ? verbalIllustration[1].map((t) => t.t)
+                  : null,
+                syns: senceData.syn_list
+                  ? senceData.syn_list.flat().map((syn) => syn.wd)
+                  : null,
+                ants: senceData.ant_list
+                  ? senceData.ant_list.flat().map((ant) => ant.wd)
+                  : senceData.opp_list
+                    ? senceData.opp_list.flat().map((opp) => opp.wd)
+                    : null
+              }
+            })
+          )
+          .flat()
+      }))
+      .filter(({ word }) => word.includes(thesaurus[0].hwi.hw))
   }
 
   static #transformResponse(

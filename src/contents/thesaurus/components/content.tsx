@@ -1,3 +1,5 @@
+import { Volume2 } from "lucide-react"
+
 import type { WordInformation } from "~types/word"
 
 interface Props {
@@ -5,83 +7,109 @@ interface Props {
 }
 
 export const Content = ({ wordInformation: word }: Props) => {
-  // In the header
-  // word (part) (pronunciation)
-
-  // Body
-  // word.words
-
-  // word (part)
-  // definitions
-  // def
-  // examples
-  // syns
-  // ants
-
-  console.log("word", word)
-
-  const { word: spelling, words, pronunciation, et, part } = word
+  const { word: spelling, words, pronunciation, et } = word
   const { audioUrl, transcription } = pronunciation
 
+  // FIXME: content security policy - play via Offscreen API in service worker
+  // TODO: block button when still playing
+  function playPronunciation() {
+    if (audioUrl) {
+      const audio = new Audio(audioUrl)
+      audio.play()
+    }
+  }
+
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-4 text-sm h-full">
       {/* Header */}
-      <div className="flex items-center">
-        <span>{spelling}</span>
-        <span>{part}</span>
-        {transcription && <span>{transcription}</span>}
-        {audioUrl && <audio src={audioUrl}></audio>}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col">
+          <span className="font-bold text-2xl">{spelling}</span>
+          {transcription && (
+            <span className="text-gray-400">{transcription}</span>
+          )}
+        </div>
+
+        {audioUrl && (
+          <button
+            onClick={playPronunciation}
+            className="border border-black rounded-md p-2"
+          >
+            <Volume2 className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
+      {/* FIXME: parse 'et' content, it has {it}, {ma} and other tokens */}
+      {/* {et && (
+        <div className="flex flex-col text-gray-600">
+          <span>Etimology:</span>
+          <span>{et}</span>
+        </div>
+      )} */}
+
       {/* Body */}
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col divide-y">
         {words.map(({ word, part, definitions }) => {
           return (
-            <div className="flex flex-col gap-8">
-              <div>
-                <span>{word}</span>
+            <div className="flex flex-col first:pt-0 last:pb-0 py-4 gap-2">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-base">{word}</span>
                 <span>{part}</span>
               </div>
 
-              {definitions.map((def) => {
-                return (
-                  <div>
-                    <span>{def.def}</span>
+              <div className="flex flex-col gap-8">
+                {definitions.map((def) => {
+                  return (
+                    <div className="flex flex-col gap-2 pl-2">
+                      <span>- {def.def}</span>
 
-                    {def.examples && (
-                      <div className="flex flex-col gap-2">
-                        {def.examples.map((example) => (
-                          <span>{example}</span>
-                        ))}
-                      </div>
-                    )}
+                      {def.examples && (
+                        <div className="flex flex-col gap-2">
+                          <span className="font-bold">Examples</span>
 
-                    {def.syns && (
-                      <div className="flex flex-col">
-                        {def.syns.map((syn) => (
-                          <span>{syn}</span>
-                        ))}
-                      </div>
-                    )}
+                          <ul>
+                            {def.examples.map((example) => (
+                              <li>"{example}"</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
-                    {def.ants && (
-                      <div className="flex flex-col">
-                        {def.ants.map((ant) => (
-                          <span>{ant}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+                      {def.syns && (
+                        <div className="flex flex-col gap-2">
+                          <span className="font-bold">Synonims</span>
+
+                          <ul className="flex flex-wrap gap-x-1 gap-y-2">
+                            {def.syns.map((syn) => (
+                              <li className="text-xs font-bold border border-black rounded-xl px-2">
+                                {syn}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {def.ants && (
+                        <div className="flex flex-col gap-2">
+                          <span className="font-bold">Antonyms</span>
+
+                          <ul className="flex flex-wrap gap-x-1 gap-y-2">
+                            {def.ants.map((syn) => (
+                              <li className="text-xs font-bold border border-black rounded-xl px-2">
+                                {syn}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )
         })}
-      </div>
-
-      {/* Footer */}
-      <div>
-        <span>footer</span>
       </div>
     </div>
   )
