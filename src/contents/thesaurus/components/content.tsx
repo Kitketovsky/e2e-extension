@@ -1,4 +1,5 @@
 import { Volume2 } from "lucide-react"
+import { useEffect, useState } from "react"
 
 import type { WordInformation } from "~types/word"
 
@@ -10,14 +11,38 @@ export const Content = ({ wordInformation: word }: Props) => {
   const { word: spelling, words, pronunciation, et } = word
   const { audioUrl, transcription } = pronunciation
 
-  // FIXME: content security policy - play via Offscreen API in service worker
-  // TODO: block button when still playing
+  const [isTranscriptionPlaying, setIsTranscriptionPlaying] = useState(false)
+
   function playPronunciation() {
-    if (audioUrl) {
-      const audio = new Audio(audioUrl)
-      audio.play()
+    if (!audioUrl) {
+      return
     }
+
+    chrome.runtime.sendMessage({
+      type: "transcription_play",
+      target: "background",
+      url: audioUrl
+    })
+
+    setIsTranscriptionPlaying(true)
   }
+
+  useEffect(() => {
+    function onAudioPlayed(message: any) {
+      if (
+        message.type === "transcription_played" &&
+        message.target === "content"
+      ) {
+        setIsTranscriptionPlaying(false)
+      }
+    }
+
+    chrome.runtime.onMessage.addListener(onAudioPlayed)
+
+    return () => {
+      chrome.runtime.onMessage.removeListener(onAudioPlayed)
+    }
+  }, [])
 
   return (
     <div className="flex flex-col gap-4 text-sm h-full">
@@ -33,7 +58,8 @@ export const Content = ({ wordInformation: word }: Props) => {
         {audioUrl && (
           <button
             onClick={playPronunciation}
-            className="border border-black rounded-md p-2"
+            disabled={isTranscriptionPlaying}
+            className="border border-black rounded-md p-2 disabled:bg-gray-100"
           >
             <Volume2 className="h-4 w-4" />
           </button>
