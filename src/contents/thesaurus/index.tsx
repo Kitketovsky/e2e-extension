@@ -32,9 +32,10 @@ const Thesaurus = () => {
 
   const [overlayEl, setOverlayEl] = useState<HTMLDivElement>(null)
 
+  // Toggling outside popup logic
   useEffect(() => {
     function onClick(event) {
-      if (!overlayEl.contains(event.target)) {
+      if (overlayEl && !overlayEl.contains(event.target)) {
         setOpen(false)
       }
     }
@@ -46,6 +47,7 @@ const Thesaurus = () => {
     }
   }, [overlayEl])
 
+  // Selection word logic
   useEffect(() => {
     function onTextSelect() {
       const selectedText = window.getSelection().toString().trim().toLowerCase()
@@ -84,21 +86,31 @@ const Thesaurus = () => {
 
   useEffect(() => {
     if (selectedText || position) {
-      MerriamWebster.getWordInformation(selectedText)
-        .then((res) => {
-          if (res.type === "found") {
-            setWordInformation(res.data)
-          }
-          if (res.type === "suggestions") {
-            setSuggestions(res.data)
-          }
-        })
-        .catch((error) => {
-          setError(error?.message || "Error fetching word information")
-        })
-        .finally(() => {
+      chrome.storage.local.get(selectedText).then((res) => {
+        if (selectedText in res) {
+          const wordInformation = res[selectedText] as WordInformation
+          setWordInformation(wordInformation)
           setOpen(true)
-        })
+          console.log("retrieved from storage")
+        } else {
+          MerriamWebster.getWordInformation(selectedText)
+            .then((res) => {
+              if (res.type === "found") {
+                setWordInformation(res.data)
+              }
+              if (res.type === "suggestions") {
+                setSuggestions(res.data)
+              }
+            })
+            .catch((error) => {
+              setError(error?.message || "Error fetching word information")
+            })
+            .finally(() => {
+              console.log("fetched from dictionary")
+              setOpen(true)
+            })
+        }
+      })
     }
   }, [selectedText, position])
 

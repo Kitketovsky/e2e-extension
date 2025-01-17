@@ -1,7 +1,9 @@
-import { Volume2 } from "lucide-react"
+import { Bookmark, Volume2 } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import type { WordInformation } from "~types/word"
+
+import { useStorage } from "../hooks/useStorage"
 
 interface Props {
   wordInformation: WordInformation
@@ -10,6 +12,8 @@ interface Props {
 export const Content = ({ wordInformation: word }: Props) => {
   const { word: spelling, words, pronunciation, et } = word
   const { audioUrl, transcription } = pronunciation
+
+  const { isSaved, toggleSave } = useStorage({ wordInformation: word })
 
   const [isTranscriptionPlaying, setIsTranscriptionPlaying] = useState(false)
 
@@ -55,15 +59,27 @@ export const Content = ({ wordInformation: word }: Props) => {
           )}
         </div>
 
-        {audioUrl && (
+        <div className="flex gap-2 items-center">
+          {audioUrl && (
+            <button
+              onClick={playPronunciation}
+              disabled={isTranscriptionPlaying}
+              className="border border-black rounded-md p-2 disabled:bg-gray-100"
+            >
+              <Volume2 className="h-4 w-4" />
+            </button>
+          )}
+
           <button
-            onClick={playPronunciation}
-            disabled={isTranscriptionPlaying}
             className="border border-black rounded-md p-2 disabled:bg-gray-100"
+            onClick={toggleSave}
           >
-            <Volume2 className="h-4 w-4" />
+            <Bookmark
+              className="h-4 w-4"
+              fill={isSaved ? "black" : "transparent"}
+            />
           </button>
-        )}
+        </div>
       </div>
 
       {/* FIXME: parse 'et' content, it has {it}, {ma} and other tokens */}
