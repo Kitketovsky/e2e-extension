@@ -1,0 +1,17 @@
+import { NavLink, useLocation } from "react-router-dom"
+
+import { ROUTES } from "~contents/routes/routes"
+
+export const Navigation = () => {
+  const { pathname } = useLocation()
+
+  return (
+    <nav>
+      {pathname === ROUTES.DICTIONARY ? (
+        <NavLink to={ROUTES.MAIN}>Go back</NavLink>
+      ) : (
+        <NavLink to={ROUTES.DICTIONARY}>Dictionary</NavLink>
+      )}
+    </nav>
+  )
+}
