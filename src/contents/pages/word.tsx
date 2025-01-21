@@ -6,14 +6,14 @@ import type { WordInformation } from "~types/word"
 import { useStorage } from "../hooks/useStorage"
 
 interface Props {
-  wordInformation: WordInformation
+  wordData: WordInformation
 }
 
-export const Content = ({ wordInformation: word }: Props) => {
-  const { word: spelling, words, pronunciation, et } = word
+export const Word = ({ wordData }: Props) => {
+  const { word: spelling, words, pronunciation, et } = wordData
   const { audioUrl, transcription } = pronunciation
 
-  const { isSaved, toggleSave } = useStorage({ wordInformation: word })
+  const { isSaved, toggleSave } = useStorage({ wordData })
 
   const [isTranscriptionPlaying, setIsTranscriptionPlaying] = useState(false)
 

@@ -2,7 +2,7 @@ interface Props {
   error: string
 }
 
-export const ErrorMessage = ({ error }: Props) => {
+export const Error = ({ error }: Props) => {
   return (
     <div>
       <span>{error}</span>
