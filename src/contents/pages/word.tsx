@@ -10,7 +10,14 @@ interface Props {
 }
 
 export const Word = ({ wordData }: Props) => {
-  const { word: spelling, words, pronunciation, et } = wordData
+  const {
+    word: spelling,
+    definitions,
+    pronunciation,
+    ants,
+    syns
+    // et
+  } = wordData
   const { audioUrl, transcription } = pronunciation
 
   const { isSaved, toggleSave } = useStorage({ wordData })
@@ -82,17 +89,9 @@ export const Word = ({ wordData }: Props) => {
         </div>
       </div>
 
-      {/* FIXME: parse 'et' content, it has {it}, {ma} and other tokens */}
-      {/* {et && (
-        <div className="flex flex-col text-gray-600">
-          <span>Etimology:</span>
-          <span>{et}</span>
-        </div>
-      )} */}
-
       {/* Body */}
       <div className="flex flex-col divide-y">
-        {words.map(({ word, part, definitions }) => {
+        {definitions.map(({ word, part, sences }) => {
           return (
             <div className="flex flex-col first:pt-0 last:pb-0 py-4 gap-2">
               <div className="flex items-center gap-2">
@@ -100,50 +99,18 @@ export const Word = ({ wordData }: Props) => {
                 <span>{part}</span>
               </div>
 
-              <div className="flex flex-col gap-8">
-                {definitions.map((def) => {
+              <div className="flex flex-col gap-2">
+                {sences.map(({ def, examples }) => {
                   return (
                     <div className="flex flex-col gap-2 pl-2">
-                      <span>- {def.def}</span>
+                      <span>- {def}</span>
 
-                      {def.examples && (
-                        <div className="flex flex-col gap-2">
-                          <span className="font-bold">Examples</span>
-
-                          <ul>
-                            {def.examples.map((example) => (
-                              <li>"{example}"</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {def.syns && (
-                        <div className="flex flex-col gap-2">
-                          <span className="font-bold">Synonims</span>
-
-                          <ul className="flex flex-wrap gap-x-1 gap-y-2">
-                            {def.syns.map((syn) => (
-                              <li className="text-xs font-bold border border-black rounded-xl px-2">
-                                {syn}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {def.ants && (
-                        <div className="flex flex-col gap-2">
-                          <span className="font-bold">Antonyms</span>
-
-                          <ul className="flex flex-wrap gap-x-1 gap-y-2">
-                            {def.ants.map((syn) => (
-                              <li className="text-xs font-bold border border-black rounded-xl px-2">
-                                {syn}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
+                      {examples.length > 0 && (
+                        <ul className="flex flex-col gap-2 text-xs italic text-gray-400">
+                          {examples.map((example) => (
+                            <li>"{example}"</li>
+                          ))}
+                        </ul>
                       )}
                     </div>
                   )
@@ -153,6 +120,32 @@ export const Word = ({ wordData }: Props) => {
           )
         })}
       </div>
+
+      {/* Synonims */}
+      {syns && (
+        <div className="flex flex-col gap-2">
+          <span>Synonyms:</span>
+
+          <div className="flex flex-wrap gap-1 text-xs">
+            {syns.map((syn) => (
+              <span className="border border-black px-1 rounded-md">{syn}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Antonyms */}
+      {ants && (
+        <div className="flex flex-col gap-2">
+          <span>Antonyms:</span>
+
+          <div className="flex flex-wrap gap-1 text-xs">
+            {ants.map((ant) => (
+              <span className="border border-black px-1 rounded-md">{ant}</span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
