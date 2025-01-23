@@ -1,7 +1,3 @@
-import type {
-  MWHeadwordInformation,
-  MWPronunciationSound
-} from "~types/mw/common"
 import type { MWDictionaryResponse } from "~types/mw/dictionary"
 import type { MWThesaurusResponse } from "~types/mw/thesaurus"
 import type { WordInformation } from "~types/word"
@@ -11,7 +7,7 @@ type ApiType = "collegiate" | "thesaurus"
 export class MerriamWebster {
   constructor() {}
 
-  static #createAudioLink(headwordInfo: MWHeadwordInformation) {
+  static #createAudioLink(headwordInfo: MWDictionaryResponse[number]["hwi"]) {
     // Supported formats: mp3, wav, ogg
     const audioFormat = "mp3"
 
@@ -24,7 +20,9 @@ export class MerriamWebster {
     return `https://media.merriam-webster.com/audio/prons/en/us/mp3/${subdirectory}/${headwordInfo.prs[0].sound.audio}.${audioFormat}`
   }
 
-  static #getAudioSubdirectory(sound: MWPronunciationSound) {
+  static #getAudioSubdirectory(
+    sound: MWDictionaryResponse[number]["hwi"]["prs"][number]["sound"]
+  ) {
     if (sound.audio.startsWith("bix")) {
       return "bix"
     }
@@ -68,53 +66,55 @@ export class MerriamWebster {
   }
 
   static #transformDictionary(dictionary: MWDictionaryResponse) {
-    const [{ hwi, fl, et }] = dictionary
+    const [{ hwi, et }] = dictionary
+
+    const normalizedWord = this.#normalizeWord(hwi.hw)
+
+    const filtered = dictionary.filter((data) => {
+      return (
+        data.meta.id === normalizedWord ||
+        data.meta.id.split(":")[0] === normalizedWord
+      )
+    })
 
     return {
-      word: this.#normalizeWord(hwi.hw),
-      part: fl,
+      word: normalizedWord,
       pronunciation: {
         transcription: hwi.prs ? hwi.prs[0].mw : null,
         audioUrl: this.#createAudioLink(hwi)
       },
-      et: et && typeof et[0][1] === "string" ? et[0][1] : null
-    }
-  }
-
-  static #transformThesaurus(thesaurus: MWThesaurusResponse) {
-    return thesaurus
-      .map(({ fl, hwi, def }) => ({
+      et: et && typeof et[0][1] === "string" ? et[0][1] : null,
+      definitions: filtered.map(({ hwi, fl, def }) => ({
         word: this.#normalizeWord(hwi.hw),
         part: fl,
-        definitions: def
+        sences: def
           .map((d) =>
-            d.sseq.flat().map((sence) => {
-              const [_, senceData] = sence
+            d.sseq.flat().map((sense) => {
+              const [_, { dt }] = sense
 
-              const verbalIllustration = senceData.dt.find(
-                (dt) => dt[0] === "vis"
-              )
-              const wordDefinition = senceData.dt.find((dt) => dt[0] === "text")
+              const definition = dt.find((dt) => dt[0] === "text")
+              const visualIllustration = dt.find((dt) => dt[0] === "vis")
 
               return {
-                def: wordDefinition ? wordDefinition[1] : null,
-                examples: verbalIllustration
-                  ? verbalIllustration[1].map((t) => t.t)
-                  : null,
-                syns: senceData.syn_list
-                  ? senceData.syn_list.flat().map((syn) => syn.wd)
-                  : null,
-                ants: senceData.ant_list
-                  ? senceData.ant_list.flat().map((ant) => ant.wd)
-                  : senceData.opp_list
-                    ? senceData.opp_list.flat().map((opp) => opp.wd)
-                    : null
+                def: definition[1],
+                examples: visualIllustration
+                  ? visualIllustration[1].map((vis) => vis.t)
+                  : []
               }
             })
           )
           .flat()
       }))
-      .filter(({ word }) => word.includes(thesaurus[0].hwi.hw))
+    }
+  }
+
+  static #transformThesaurus(thesaurus: MWThesaurusResponse) {
+    const [{ meta }] = thesaurus
+
+    return {
+      syns: meta.syns ? meta.syns.flat().slice(0, 10) : null,
+      ants: meta.ants ? meta.ants.flat().slice(0, 10) : null
+    }
   }
 
   static #transformResponse(
@@ -122,9 +122,13 @@ export class MerriamWebster {
   ): WordInformation {
     const [dictionary, thesaurus] = response
 
-    return {
-      ...this.#transformDictionary(dictionary),
-      words: this.#transformThesaurus(thesaurus)
+    try {
+      return {
+        ...this.#transformDictionary(dictionary),
+        ...this.#transformThesaurus(thesaurus)
+      }
+    } catch (error) {
+      console.log("error", error)
     }
   }
 
