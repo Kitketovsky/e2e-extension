@@ -20,6 +20,23 @@ export class MerriamWebster {
     return `https://media.merriam-webster.com/audio/prons/en/us/mp3/${subdirectory}/${headwordInfo.prs[0].sound.audio}.${audioFormat}`
   }
 
+  static #normalizeText(text: string) {
+    if (text.includes("a_link")) {
+      return ""
+    }
+
+    const sanitized = text
+      .replaceAll(/\{[^{}]*\}/g, "")
+      .replaceAll("*", "")
+      .trim()
+
+    if (sanitized.length === 1) {
+      return ""
+    }
+
+    return sanitized
+  }
+
   static #getAudioSubdirectory(
     sound: MWDictionaryResponse[number]["hwi"]["prs"][number]["sound"]
   ) {
@@ -61,14 +78,10 @@ export class MerriamWebster {
     return data
   }
 
-  static #normalizeWord(word: string) {
-    return word.replaceAll("*", "")
-  }
-
   static #transformDictionary(dictionary: MWDictionaryResponse) {
     const [{ hwi, et }] = dictionary
 
-    const normalizedWord = this.#normalizeWord(hwi.hw)
+    const normalizedWord = this.#normalizeText(hwi.hw)
 
     const filtered = dictionary.filter((data) => {
       return (
@@ -85,24 +98,30 @@ export class MerriamWebster {
       },
       et: et && typeof et[0][1] === "string" ? et[0][1] : null,
       definitions: filtered.map(({ hwi, fl, def }) => ({
-        word: this.#normalizeWord(hwi.hw),
+        word: this.#normalizeText(hwi.hw),
         part: fl,
         sences: def
           .map((d) =>
-            d.sseq.flat().map((sense) => {
-              const [_, { dt }] = sense
+            d.sseq
+              .flat()
+              .map((sense) => {
+                const [_, { dt }] = sense
 
-              const definition = dt.find((dt) => dt[0] === "text")
-              const visualIllustration = dt.find((dt) => dt[0] === "vis")
+                const definition = dt.find((dt) => dt[0] === "text")
+                const visualIllustration = dt.find((dt) => dt[0] === "vis")
 
-              return {
-                def: definition[1],
-                examples: visualIllustration
-                  ? visualIllustration[1].map((vis) => vis.t)
-                  : []
-              }
-            })
+                return {
+                  def: this.#normalizeText(definition[1]),
+                  examples: visualIllustration
+                    ? visualIllustration[1].map((vis) =>
+                        this.#normalizeText(vis.t)
+                      )
+                    : []
+                }
+              })
+              .filter((sense) => !!sense.def)
           )
+
           .flat()
       }))
     }
@@ -122,13 +141,9 @@ export class MerriamWebster {
   ): WordInformation {
     const [dictionary, thesaurus] = response
 
-    try {
-      return {
-        ...this.#transformDictionary(dictionary),
-        ...this.#transformThesaurus(thesaurus)
-      }
-    } catch (error) {
-      console.log("error", error)
+    return {
+      ...this.#transformDictionary(dictionary),
+      ...this.#transformThesaurus(thesaurus)
     }
   }
 
