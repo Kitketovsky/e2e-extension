@@ -8,7 +8,11 @@ interface Props {
   position: { x: number; y: number }
 }
 
-export function Overlay({ setOverlayEl, position }: Props) {
+export function Overlay({ setOverlayEl, position, open }: Props) {
+  if (!open) {
+    return false
+  }
+
   return (
     <div
       ref={setOverlayEl}

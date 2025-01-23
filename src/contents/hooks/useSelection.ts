@@ -26,9 +26,10 @@ export function useSelection({ element }: Props) {
         const selection = window.getSelection()
         const range = selection.getRangeAt(0)
 
-        const isSelectedInsideExtension = !open
-          ? false
-          : element?.contains(range.endContainer.parentElement)
+        const isSelectedInsideExtension =
+          !open || !element
+            ? false
+            : element.contains(range.endContainer.parentElement)
 
         if (!isSelectedInsideExtension) {
           const rect = range.getBoundingClientRect()
