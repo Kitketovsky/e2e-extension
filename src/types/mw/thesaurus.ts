@@ -1,15 +1,47 @@
-import type {
-  MWFunctionalLabel,
-  MWHeadwordInformation,
-  MWShortDefinitions
-} from "./common"
-
 export type MWThesaurusResponse = {
-  meta: MWThesaurusMeta
-  def: MWThesaurusDefinitions
-  fl: MWFunctionalLabel
-  shortdef: MWShortDefinitions
-  hwi: MWHeadwordInformation
+  meta: {
+    id: string
+    uuid: string
+    src: string
+    section: string
+    target: {
+      tuuid: string
+      tsrc: string
+    }
+    stems: string[]
+    syns: string[][]
+    ants: string[][]
+    offensive: boolean
+  }
+  def: {
+    sseq: [
+      "sense",
+      {
+        sn: string
+        // tags in dt: bnw, ca, ri, snote, uns, or vis
+        dt: [["text", string], ["vis", { t: string }[]]]
+        syn_list?: { wd: string }[][]
+        sim_list?: { wd: string }[][]
+        rel_list?: { wd: string }[][]
+        near_list?: { wd: string }[][]
+        ant_list?: { wd: string }[][]
+        opp_list?: { wd: string }[][]
+      }
+    ][][]
+  }[]
+  fl: string
+  shortdef: string[]
+  hwi: {
+    hw: string
+    prs?: {
+      mw: string
+      sound?: {
+        audio: string
+        ref: string
+        stat: string
+      }
+    }[]
+  }
 }[]
 
 type MWThesaurusMeta = {
@@ -26,21 +58,3 @@ type MWThesaurusMeta = {
   ants: string[][]
   offensive: boolean
 }
-
-type MWThesaurusDefinitions = {
-  sseq: [
-    "sense",
-    {
-      sn: string
-      // tags in dt: bnw, ca, ri, snote, uns, or vis
-      dt: [["text", string], ["vis", { t: string }[]]]
-      syn_list?: MWThesaurusList
-      rel_list?: MWThesaurusList
-      near_list?: MWThesaurusList
-      ant_list?: MWThesaurusList
-      opp_list?: MWThesaurusList
-    }
-  ][][]
-}[]
-
-type MWThesaurusList = { wd: string }[][]
