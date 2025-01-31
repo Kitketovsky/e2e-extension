@@ -23,7 +23,7 @@ export type MWDictionaryResponse = {
   et?: ["text", string] | ["et-snote", ["t", string]]
   shortdef: string[]
   def: {
-    sseq: (["pseq", Sense[]] | Sense[])[]
+    sseq: (["pseq", Sense[]] | Sense)[][]
   }[]
 }[]
 
@@ -35,5 +35,9 @@ export type Sense = [
     sn: string
     // "text" is required, "vis" is optional
     dt: Array<["text", string] | ["vis", { t: string }[]]>
+    sdsense?: {
+      sd: string
+      dt: Array<["text", string] | ["vis", { t: string }[]]>
+    }
   }
 ]

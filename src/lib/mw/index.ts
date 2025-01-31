@@ -140,8 +140,16 @@ export class MerriamWebster {
       const definition = data.dt.find((dt) => dt[0] === "text")
       const visualIllustration = data.dt.find((dt) => dt[0] === "vis")
 
+      const sdsenseDefinition = data?.sdsense?.dt.find(
+        (dt) => dt[0] === "text"
+      )[1]
+
+      const sdsenseText = sdsenseDefinition
+        ? `, ${data.sdsense.sd}, ${sdsenseDefinition}`
+        : ""
+
       return {
-        def: this.#parseTokens(definition[1]),
+        def: this.#parseTokens(`${definition[1]}${sdsenseText}`),
         examples: visualIllustration
           ? visualIllustration[1].map((vis) => this.#parseTokens(vis.t))
           : []
@@ -176,6 +184,7 @@ export class MerriamWebster {
                     return collection.map(transformSense)
                   }
 
+                  // the rest is not important yet
                   return null
                 })
                 .flat()
