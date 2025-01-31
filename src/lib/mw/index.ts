@@ -2,7 +2,12 @@ import type { MWDictionaryResponse } from "~types/mw/dictionary"
 import type { MWThesaurusResponse } from "~types/mw/thesaurus"
 import type { WordInformation } from "~types/word"
 
+import { tokens } from "./tokens"
+
 type ApiType = "collegiate" | "thesaurus"
+
+const SINGLE_TAG_REGEX = /{([\w\s\d|:]+)}/g
+const DOUBLE_TAGS_REGEX = /{(\w+)}(.+){\/(\1)}/g
 
 export class MerriamWebster {
   constructor() {}
@@ -18,23 +23,6 @@ export class MerriamWebster {
     const subdirectory = this.#getAudioSubdirectory(headwordInfo.prs[0].sound)
 
     return `https://media.merriam-webster.com/audio/prons/en/us/mp3/${subdirectory}/${headwordInfo.prs[0].sound.audio}.${audioFormat}`
-  }
-
-  static #normalizeText(text: string) {
-    if (text.includes("a_link")) {
-      return ""
-    }
-
-    const sanitized = text
-      .replaceAll(/\{[^{}]*\}/g, "")
-      .replaceAll("*", "")
-      .trim()
-
-    if (sanitized.length === 1) {
-      return ""
-    }
-
-    return sanitized
   }
 
   static #getAudioSubdirectory(
@@ -78,10 +66,65 @@ export class MerriamWebster {
     return data
   }
 
+  static #parseTokens(input: string) {
+    const hasDoubleTags = input.match(DOUBLE_TAGS_REGEX)
+
+    if (!hasDoubleTags) {
+      const hasSingleTags = input.match(SINGLE_TAG_REGEX)
+
+      if (!hasSingleTags) {
+        return input
+      }
+
+      const singleTagsCleared = input.replace(
+        SINGLE_TAG_REGEX,
+        (_, tag, pipedTag) => {
+          // The tokens contain fields separated by a pipe character ("|"). There are at least
+          // 2 fields and a maximum of 4 fields within these tokens, indicated in the "Token Format" column.
+
+          const [tagName, ...fields] = (tag ?? pipedTag).split("|")
+
+          if (!(tagName in tokens)) {
+            throw new Error(
+              `Single tag parsing error. No such token as '${tagName}' defined.`
+            )
+          }
+
+          const formatter = tokens[tagName]
+
+          const formatted = formatter({ content: "", tag: tagName, fields })
+
+          return formatted
+        }
+      )
+
+      return this.#parseTokens(singleTagsCleared)
+    }
+
+    const doubleTagsCleaned = input.replace(
+      DOUBLE_TAGS_REGEX,
+      (_, openTag, content) => {
+        if (!(openTag in tokens)) {
+          throw new Error(
+            `Double tag parsing error. No such token as '${openTag}' defined.`
+          )
+        }
+
+        const formatter = tokens[openTag]
+
+        const formatted = formatter({ content, tag: openTag, fields: [] })
+
+        return formatted
+      }
+    )
+
+    return this.#parseTokens(doubleTagsCleaned)
+  }
+
   static #transformDictionary(dictionary: MWDictionaryResponse) {
     const [{ hwi, et }] = dictionary
 
-    const normalizedWord = this.#normalizeText(hwi.hw)
+    const normalizedWord = hwi.hw.replaceAll("*", "")
 
     const filtered = dictionary.filter((data) => {
       return (
@@ -98,23 +141,29 @@ export class MerriamWebster {
       },
       et: et && typeof et[0][1] === "string" ? et[0][1] : null,
       definitions: filtered.map(({ hwi, fl, def }) => ({
-        word: this.#normalizeText(hwi.hw),
+        word: hwi.hw.replaceAll("*", ""),
         part: fl,
         sences: def
           .map((d) =>
             d.sseq
               .flat()
               .map((sense) => {
-                const [_, { dt }] = sense
+                const [type, { dt }] = sense
+
+                if (type !== "sense") {
+                  // FIXME: https://dictionaryapi.com/products/json#sec-2.pseq
+                  // bs (such as...) -> sense (1) (2) etc. (examples)
+                  // word "better"
+                }
 
                 const definition = dt.find((dt) => dt[0] === "text")
                 const visualIllustration = dt.find((dt) => dt[0] === "vis")
 
                 return {
-                  def: this.#normalizeText(definition[1]),
+                  def: this.#parseTokens(definition[1]),
                   examples: visualIllustration
                     ? visualIllustration[1].map((vis) =>
-                        this.#normalizeText(vis.t)
+                        this.#parseTokens(vis.t)
                       )
                     : []
                 }

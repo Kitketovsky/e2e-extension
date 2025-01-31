@@ -124,12 +124,20 @@ export const Word = ({ wordData }: Props) => {
                   {sences.map(({ def, examples }) => {
                     return (
                       <div className="flex flex-col gap-2">
-                        <span>- {def}</span>
+                        <span>
+                          -{" "}
+                          <span
+                            dangerouslySetInnerHTML={{ __html: def }}
+                          ></span>
+                        </span>
 
                         {examples.length > 0 && (
-                          <ul className="flex flex-col gap-2 text-xs italic text-gray-400">
+                          <ul className="flex flex-col gap-2 text-xs text-gray-400">
                             {examples.map((example) => (
-                              <li>"{example}"</li>
+                              <li
+                                className="[i]:text-red-400"
+                                dangerouslySetInnerHTML={{ __html: example }}
+                              ></li>
                             ))}
                           </ul>
                         )}

@@ -24,7 +24,7 @@ export type MWDictionaryResponse = {
   shortdef: string[]
   def: {
     sseq: [
-      "sense",
+      "sense" | "pseq",
       {
         // the subject area or regional/usage status, e.g.: 'chiefly British', 'sometimes offensive'
         sls?: string[]

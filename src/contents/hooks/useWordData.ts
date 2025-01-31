@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 
-import { MerriamWebster } from "~lib/MerriamWebster"
+import { MerriamWebster } from "~lib/mw/index"
 import type { WordInformation } from "~types/word"
 
 interface Props {
