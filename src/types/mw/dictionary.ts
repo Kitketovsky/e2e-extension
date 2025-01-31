@@ -23,15 +23,17 @@ export type MWDictionaryResponse = {
   et?: ["text", string] | ["et-snote", ["t", string]]
   shortdef: string[]
   def: {
-    sseq: [
-      "sense" | "pseq",
-      {
-        // the subject area or regional/usage status, e.g.: 'chiefly British', 'sometimes offensive'
-        sls?: string[]
-        sn: string
-        // "text" is required, "vis" is optional
-        dt: Array<["text", string] | ["vis", { t: string }[]]>
-      }
-    ][][]
+    sseq: (["pseq", Sense[]] | Sense[])[]
   }[]
 }[]
+
+export type Sense = [
+  "sense",
+  {
+    // the subject area or regional/usage status, e.g.: 'chiefly British', 'sometimes offensive'
+    sls?: string[]
+    sn: string
+    // "text" is required, "vis" is optional
+    dt: Array<["text", string] | ["vis", { t: string }[]]>
+  }
+]

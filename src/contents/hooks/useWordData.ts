@@ -31,12 +31,14 @@ export function useWordData({ selectedText, onOpen }: Props) {
             .then((res) => {
               if (res.type === "found") {
                 setWordData(res.data)
+                console.log("res", res.data)
               }
               if (res.type === "suggestions") {
                 setWordSuggestions(res.data)
               }
             })
             .catch((error) => {
+              console.log("error", error)
               setWordError(error?.message || "Error fetching word information")
             })
             .finally(() => {

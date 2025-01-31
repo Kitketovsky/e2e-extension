@@ -9,7 +9,9 @@ function defaultFormat({ content }: FormatProps) {
 }
 
 function linkFormat({ fields }: FormatProps) {
-  return fields[0] ?? ""
+  const [referenceWordLink] = fields
+  const [referenceWord] = referenceWordLink.split(":")
+  return referenceWord ?? ""
 }
 
 export const tokens: Record<string, (props: FormatProps) => string> = {

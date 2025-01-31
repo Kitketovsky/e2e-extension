@@ -1,4 +1,4 @@
-import type { MWDictionaryResponse } from "~types/mw/dictionary"
+import type { MWDictionaryResponse, Sense } from "~types/mw/dictionary"
 import type { MWThesaurusResponse } from "~types/mw/thesaurus"
 import type { WordInformation } from "~types/word"
 
@@ -66,7 +66,7 @@ export class MerriamWebster {
     return data
   }
 
-  static #parseTokens(input: string) {
+  static #parseTokens(input: string): string {
     const hasDoubleTags = input.match(DOUBLE_TAGS_REGEX)
 
     if (!hasDoubleTags) {
@@ -128,10 +128,25 @@ export class MerriamWebster {
 
     const filtered = dictionary.filter((data) => {
       return (
-        data.meta.id === normalizedWord ||
-        data.meta.id.split(":")[0] === normalizedWord
+        data.def &&
+        (data.meta.id === normalizedWord ||
+          data.meta.id.split(":")[0] === normalizedWord)
       )
     })
+
+    const transformSense = (sense: Sense) => {
+      const [_, data] = sense
+
+      const definition = data.dt.find((dt) => dt[0] === "text")
+      const visualIllustration = data.dt.find((dt) => dt[0] === "vis")
+
+      return {
+        def: this.#parseTokens(definition[1]),
+        examples: visualIllustration
+          ? visualIllustration[1].map((vis) => this.#parseTokens(vis.t))
+          : []
+      }
+    }
 
     return {
       word: normalizedWord,
@@ -140,39 +155,35 @@ export class MerriamWebster {
         audioUrl: this.#createAudioLink(hwi)
       },
       et: et && typeof et[0][1] === "string" ? et[0][1] : null,
-      definitions: filtered.map(({ hwi, fl, def }) => ({
-        word: hwi.hw.replaceAll("*", ""),
-        part: fl,
-        sences: def
-          .map((d) =>
-            d.sseq
-              .flat()
-              .map((sense) => {
-                const [type, { dt }] = sense
+      definitions: filtered.map(({ hwi, fl, def }) => {
+        return {
+          word: hwi.hw.replaceAll("*", ""),
+          part: fl,
+          sences: def
+            .map((d) =>
+              d.sseq
+                .flat()
+                .map((sequence) => {
+                  const [type, collection] = sequence
 
-                if (type !== "sense") {
-                  // FIXME: https://dictionaryapi.com/products/json#sec-2.pseq
-                  // bs (such as...) -> sense (1) (2) etc. (examples)
-                  // word "better"
-                }
+                  if (type === "sense") {
+                    return transformSense(sequence)
+                  }
 
-                const definition = dt.find((dt) => dt[0] === "text")
-                const visualIllustration = dt.find((dt) => dt[0] === "vis")
+                  if (type === "pseq") {
+                    // https://dictionaryapi.com/products/json#sec-2.pseq
+                    // bs (such as...) -> sense (1) (2) etc. (examples)
+                    return collection.map(transformSense)
+                  }
 
-                return {
-                  def: this.#parseTokens(definition[1]),
-                  examples: visualIllustration
-                    ? visualIllustration[1].map((vis) =>
-                        this.#parseTokens(vis.t)
-                      )
-                    : []
-                }
-              })
-              .filter((sense) => !!sense.def)
-          )
-
-          .flat()
-      }))
+                  return null
+                })
+                .flat()
+                .filter((sense) => sense && sense.def)
+            )
+            .flat()
+        }
+      })
     }
   }
 
