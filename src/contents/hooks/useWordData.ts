@@ -29,6 +29,7 @@ export function useWordData({ selectedText, onOpen }: Props) {
         } else {
           MerriamWebster.getWordInformation(selectedText)
             .then((res) => {
+              console.log("res", res)
               if (res.type === "found") {
                 setWordData(res.data)
                 console.log("res", res.data)

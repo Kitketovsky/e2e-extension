@@ -17,7 +17,11 @@ export function Overlay({ setOverlayEl, position, open }: Props) {
 
   return (
     <ScrollArea
-      style={{ top: `${position?.y}px`, left: `${position?.x}px` }}
+      style={{
+        position: "fixed",
+        top: `${position?.y}px`,
+        left: `${position?.x}px`
+      }}
       className="bg-white text-black p-4 rounded-xl z-50 flex max-w-[370px] max-h-[500px] min-w-[300px] border border-black"
     >
       <div ref={setOverlayEl} className="flex flex-col gap-4 w-full h-full">

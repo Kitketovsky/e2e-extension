@@ -148,6 +148,13 @@ export class MerriamWebster {
         ? `, ${data.sdsense.sd}, ${sdsenseDefinition}`
         : ""
 
+      if (!definition) {
+        return {
+          def: "",
+          examples: []
+        }
+      }
+
       return {
         def: this.#parseTokens(`${definition[1]}${sdsenseText}`),
         examples: visualIllustration
@@ -196,7 +203,14 @@ export class MerriamWebster {
     }
   }
 
-  static #transformThesaurus(thesaurus: MWThesaurusResponse) {
+  static #transformThesaurus(thesaurus: MWThesaurusResponse | string[]) {
+    if (thesaurus.every((item) => typeof item === "string")) {
+      return {
+        syns: [],
+        ants: []
+      }
+    }
+
     const [{ meta }] = thesaurus
 
     return {
@@ -222,23 +236,22 @@ export class MerriamWebster {
       this.#getSelectedLexiconWordInformation(word, "thesaurus")
     ])
 
-    if (dictionary.every((v) => typeof v === "string")) {
+    if (
+      dictionary.every((v) => typeof v === "string") &&
+      thesaurus.every((v) => typeof v === "string")
+    ) {
       return {
         type: "suggestions" as const,
         data: dictionary
       }
     }
 
-    if (thesaurus.every((v) => typeof v === "string")) {
-      return {
-        type: "suggestions" as const,
-        data: thesaurus
-      }
-    }
-
     return {
       type: "found" as const,
-      data: this.#transformResponse([dictionary, thesaurus])
+      data: this.#transformResponse([
+        dictionary as MWDictionaryResponse,
+        thesaurus as MWThesaurusResponse
+      ])
     }
   }
 }
