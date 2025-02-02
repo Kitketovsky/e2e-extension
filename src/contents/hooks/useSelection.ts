@@ -53,5 +53,5 @@ export function useSelection({ element }: Props) {
     }
   }, [open, element])
 
-  return { selectedText, position, clearSelectedText }
+  return { selectedText, position, clearSelectedText, setSelectedText }
 }

@@ -1,24 +1,24 @@
-import { Bookmark, Volume2 } from "lucide-react"
-import { useEffect, useState } from "react"
-import { NavLink } from "react-router-dom"
+import { useState } from "react"
 
 import { badgeVariants } from "~components/ui/badge"
-import { Button } from "~components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~components/ui/tooltip"
+import { TooltipProvider } from "~components/ui/tooltip"
 import type { WordInformation } from "~types/word"
 
-import { useStorage } from "../hooks/useStorage"
+import { PlayAudioButton } from "./components/play-audio-btn"
+import { SaveDictionaryButton } from "./components/save-dictionary-btn"
 
 interface Props {
   wordData: WordInformation
+  setSelectedText: React.Dispatch<React.SetStateAction<string>>
 }
 
-export const Word = ({ wordData }: Props) => {
+export const Word = ({ wordData, setSelectedText }: Props) => {
+  const [wrapperEl, setWrapperEl] = useState<HTMLElement | null>(null)
+
+  if (!wordData) {
+    return null
+  }
+
   const {
     word: spelling,
     definitions,
@@ -27,44 +27,8 @@ export const Word = ({ wordData }: Props) => {
     syns
     // et
   } = wordData
+
   const { audioUrl, transcription } = pronunciation
-
-  const { isSaved, toggleSave } = useStorage({ wordData })
-
-  const [wrapperEl, setWrapperEl] = useState<HTMLElement | null>(null)
-
-  const [isTranscriptionPlaying, setIsTranscriptionPlaying] = useState(false)
-
-  function playPronunciation() {
-    if (!audioUrl) {
-      return
-    }
-
-    chrome.runtime.sendMessage({
-      type: "transcription_play",
-      target: "background",
-      url: audioUrl
-    })
-
-    setIsTranscriptionPlaying(true)
-  }
-
-  useEffect(() => {
-    function onAudioPlayed(message: any) {
-      if (
-        message.type === "transcription_played" &&
-        message.target === "content"
-      ) {
-        setIsTranscriptionPlaying(false)
-      }
-    }
-
-    chrome.runtime.onMessage.addListener(onAudioPlayed)
-
-    return () => {
-      chrome.runtime.onMessage.removeListener(onAudioPlayed)
-    }
-  }, [])
 
   return (
     <TooltipProvider>
@@ -79,34 +43,8 @@ export const Word = ({ wordData }: Props) => {
           </div>
 
           <div className="flex gap-2 items-center">
-            {audioUrl && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={playPronunciation}
-                    disabled={isTranscriptionPlaying}
-                  >
-                    <Volume2 />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent container={wrapperEl} className="z-[9999]">
-                  <span>Play pronunciation</span>
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={toggleSave}>
-                  <Bookmark fill={isSaved ? "black" : "transparent"} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent container={wrapperEl} className="z-[9999]">
-                <span>Save to dictionary</span>
-              </TooltipContent>
-            </Tooltip>
+            <PlayAudioButton audioUrl={audioUrl} wrapperEl={wrapperEl} />
+            <SaveDictionaryButton wordData={wordData} wrapperEl={wrapperEl} />
           </div>
         </div>
 
@@ -157,12 +95,12 @@ export const Word = ({ wordData }: Props) => {
 
             <div className="flex flex-wrap gap-1 text-xs">
               {syns.map((syn) => (
-                <NavLink
-                  to={`/word/${syn}`}
+                <button
+                  onClick={() => setSelectedText(syn)}
                   className={badgeVariants({ variant: "secondary" })}
                 >
                   {syn}
-                </NavLink>
+                </button>
               ))}
             </div>
           </div>
@@ -175,12 +113,12 @@ export const Word = ({ wordData }: Props) => {
 
             <div className="flex flex-wrap gap-1 text-xs">
               {ants.map((ant) => (
-                <NavLink
-                  to={`/word/${ant}`}
+                <button
+                  onClick={() => setSelectedText(ant)}
                   className={badgeVariants({ variant: "secondary" })}
                 >
                   {ant}
-                </NavLink>
+                </button>
               ))}
             </div>
           </div>
