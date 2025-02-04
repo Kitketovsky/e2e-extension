@@ -1,4 +1,9 @@
-import type { Bs, MWDictionaryResponse, Sense } from "~types/mw/dictionary"
+import type {
+  Bs,
+  MWDictionaryResponse,
+  Pronunciation,
+  Sense
+} from "~types/mw/dictionary"
 import type { MWThesaurusResponse } from "~types/mw/thesaurus"
 import type { WordInformation } from "~types/word"
 
@@ -12,17 +17,17 @@ const DOUBLE_TAGS_REGEX = /{(\w+)}(.+){\/(\1)}/g
 export class MerriamWebster {
   constructor() {}
 
-  static #createAudioLink(headwordInfo: MWDictionaryResponse[number]["hwi"]) {
-    // Supported formats: mp3, wav, ogg
-    const audioFormat = "mp3"
-
-    if (!headwordInfo.prs || !headwordInfo.prs[0].sound) {
+  static #createAudioLink(pronunciation: Pronunciation[number] | null) {
+    if (!pronunciation) {
       return null
     }
 
-    const subdirectory = this.#getAudioSubdirectory(headwordInfo.prs[0].sound)
+    // Supported formats: mp3, wav, ogg
+    const audioFormat = "mp3"
 
-    return `https://media.merriam-webster.com/audio/prons/en/us/mp3/${subdirectory}/${headwordInfo.prs[0].sound.audio}.${audioFormat}`
+    const subdirectory = this.#getAudioSubdirectory(pronunciation.sound)
+
+    return `https://media.merriam-webster.com/audio/prons/en/us/mp3/${subdirectory}/${pronunciation.sound.audio}.${audioFormat}`
   }
 
   static #getAudioSubdirectory(
@@ -121,8 +126,39 @@ export class MerriamWebster {
     return this.#parseTokens(doubleTagsCleaned)
   }
 
+  static #extractDefinitionsWithExamples(sense: Sense | Bs) {
+    const [type, data] = sense
+
+    const extracted = type === "sense" ? data : data.sense
+
+    const definition = extracted.dt.find((dt) => dt[0] === "text")
+    const visualIllustration = extracted.dt.find((dt) => dt[0] === "vis")
+
+    const sdsenseDefinition = extracted?.sdsense?.dt.find(
+      (dt) => dt[0] === "text"
+    )[1]
+
+    const sdsenseText = sdsenseDefinition
+      ? `, ${extracted?.sdsense.sd}, ${sdsenseDefinition}`
+      : ""
+
+    if (!definition) {
+      return {
+        def: "",
+        examples: []
+      }
+    }
+
+    return {
+      def: this.#parseTokens(`${definition[1]}${sdsenseText}`),
+      examples: visualIllustration
+        ? visualIllustration[1].map((vis) => this.#parseTokens(vis.t))
+        : []
+    }
+  }
+
   static #transformDictionary(dictionary: MWDictionaryResponse) {
-    const [{ hwi, et }] = dictionary
+    const [{ hwi, et, fl, uros }] = dictionary
 
     const normalizedWord = hwi.hw.replaceAll("*", "")
 
@@ -134,42 +170,13 @@ export class MerriamWebster {
       )
     })
 
-    const transformSense = (sense: Sense | Bs) => {
-      const [type, data] = sense
-
-      const extracted = type === "sense" ? data : data.sense
-
-      const definition = extracted.dt.find((dt) => dt[0] === "text")
-      const visualIllustration = extracted.dt.find((dt) => dt[0] === "vis")
-
-      const sdsenseDefinition = extracted?.sdsense?.dt.find(
-        (dt) => dt[0] === "text"
-      )[1]
-
-      const sdsenseText = sdsenseDefinition
-        ? `, ${extracted?.sdsense.sd}, ${sdsenseDefinition}`
-        : ""
-
-      if (!definition) {
-        return {
-          def: "",
-          examples: []
-        }
-      }
-
-      return {
-        def: this.#parseTokens(`${definition[1]}${sdsenseText}`),
-        examples: visualIllustration
-          ? visualIllustration[1].map((vis) => this.#parseTokens(vis.t))
-          : []
-      }
-    }
+    const hasUros = fl === "adjective" && uros
 
     return {
       word: normalizedWord,
       pronunciation: {
         transcription: hwi.prs ? hwi.prs[0].mw : null,
-        audioUrl: this.#createAudioLink(hwi)
+        audioUrl: this.#createAudioLink(hwi.prs[0])
       },
       et: et && typeof et[0][1] === "string" ? et[0][1] : null,
       definitions: filtered.map(({ hwi, fl, def }) => {
@@ -184,13 +191,13 @@ export class MerriamWebster {
                   const [type, collection] = sequence
 
                   if (type === "sense") {
-                    return transformSense(sequence)
+                    return this.#extractDefinitionsWithExamples(sequence)
                   }
 
                   if (type === "pseq") {
                     // https://dictionaryapi.com/products/json#sec-2.pseq
                     // bs (such as...) -> sense (1) (2) etc. (examples)
-                    return collection.map(transformSense)
+                    return collection.map(this.#extractDefinitionsWithExamples)
                   }
 
                   // the rest is not important yet
@@ -201,7 +208,19 @@ export class MerriamWebster {
             )
             .flat()
         }
-      })
+      }),
+      runons: hasUros
+        ? uros.map(({ ure, prs, fl }) => ({
+            word: ure,
+            pronunciation: prs
+              ? {
+                  audioUrl: this.#createAudioLink(prs[0]),
+                  transcription: prs[0].mw
+                }
+              : null,
+            part: fl
+          }))
+        : null
     }
   }
 

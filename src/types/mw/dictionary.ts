@@ -10,14 +10,7 @@ export type MWDictionaryResponse = {
   }
   hwi: {
     hw: string
-    prs?: {
-      mw: string
-      sound?: {
-        audio: string
-        ref: string
-        stat: string
-      }
-    }[]
+    prs?: Pronunciation
   }
   fl: string
   et?: ["text", string] | ["et-snote", ["t", string]]
@@ -25,6 +18,22 @@ export type MWDictionaryResponse = {
   def: {
     sseq: Sseq
   }[]
+  uros?: Uros
+}[]
+
+type Uros = {
+  ure: string
+  prs?: Pronunciation
+  fl: string
+}[]
+
+export type Pronunciation = {
+  mw: string
+  sound?: {
+    audio: string
+    ref: string
+    stat: string
+  }
 }[]
 
 // sseq may include => sense, bs or pseq
