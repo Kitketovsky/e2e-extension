@@ -23,9 +23,16 @@ export type MWDictionaryResponse = {
   et?: ["text", string] | ["et-snote", ["t", string]]
   shortdef: string[]
   def: {
-    sseq: (["pseq", Sense[]] | Sense)[][]
+    sseq: Sseq
   }[]
 }[]
+
+// sseq may include => sense, bs or pseq
+// pseq inside sseq => may include bs or sense
+type Sseq = (Pseq | Bs | Sense)[][]
+type Pseq = ["pseq", (Sense | Bs)[]]
+
+export type Bs = ["bs", { sense: Sense[1] }]
 
 export type Sense = [
   "sense",

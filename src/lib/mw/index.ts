@@ -1,4 +1,4 @@
-import type { MWDictionaryResponse, Sense } from "~types/mw/dictionary"
+import type { Bs, MWDictionaryResponse, Sense } from "~types/mw/dictionary"
 import type { MWThesaurusResponse } from "~types/mw/thesaurus"
 import type { WordInformation } from "~types/word"
 
@@ -134,18 +134,20 @@ export class MerriamWebster {
       )
     })
 
-    const transformSense = (sense: Sense) => {
-      const [_, data] = sense
+    const transformSense = (sense: Sense | Bs) => {
+      const [type, data] = sense
 
-      const definition = data.dt.find((dt) => dt[0] === "text")
-      const visualIllustration = data.dt.find((dt) => dt[0] === "vis")
+      const extracted = type === "sense" ? data : data.sense
 
-      const sdsenseDefinition = data?.sdsense?.dt.find(
+      const definition = extracted.dt.find((dt) => dt[0] === "text")
+      const visualIllustration = extracted.dt.find((dt) => dt[0] === "vis")
+
+      const sdsenseDefinition = extracted?.sdsense?.dt.find(
         (dt) => dt[0] === "text"
       )[1]
 
       const sdsenseText = sdsenseDefinition
-        ? `, ${data.sdsense.sd}, ${sdsenseDefinition}`
+        ? `, ${extracted?.sdsense.sd}, ${sdsenseDefinition}`
         : ""
 
       if (!definition) {
