@@ -158,7 +158,7 @@ export class MerriamWebster {
   }
 
   static #transformDictionary(dictionary: MWDictionaryResponse) {
-    const [{ hwi, et, fl, uros }] = dictionary
+    const [{ hwi, et, fl, uros, ins }] = dictionary
 
     const normalizedWord = hwi.hw.replaceAll("*", "")
 
@@ -172,55 +172,64 @@ export class MerriamWebster {
 
     const hasUros = fl === "adjective" && uros
 
+    const runons = hasUros
+      ? uros.map(({ ure, prs, fl }) => ({
+          word: ure,
+          pronunciation: prs
+            ? {
+                audioUrl: this.#createAudioLink(prs[0]),
+                transcription: prs[0].mw
+              }
+            : null,
+          part: fl
+        }))
+      : null
+
+    const definitions = filtered.map(({ hwi, fl, def, ins }) => {
+      return {
+        word: hwi.hw.replaceAll("*", ""),
+        part: fl,
+        sences: def
+          .map((d) =>
+            d.sseq
+              .flat()
+              .map((sequence) => {
+                const [type, collection] = sequence
+
+                if (type === "sense") {
+                  return this.#extractDefinitionsWithExamples(sequence)
+                }
+
+                if (type === "pseq") {
+                  // https://dictionaryapi.com/products/json#sec-2.pseq
+                  // bs (such as...) -> sense (1) (2) etc. (examples)
+                  return collection.map(this.#extractDefinitionsWithExamples)
+                }
+
+                // the rest is not important yet
+                return null
+              })
+              .flat()
+              .filter((sense) => sense && sense.def)
+          )
+          .flat()
+      }
+    })
+
+    const etymology = et && typeof et[0][1] === "string" ? et[0][1] : null
+
+    const pronunciation = {
+      transcription: hwi.prs ? hwi.prs[0].mw : null,
+      audioUrl: this.#createAudioLink(hwi.prs[0])
+    }
+
     return {
       word: normalizedWord,
-      pronunciation: {
-        transcription: hwi.prs ? hwi.prs[0].mw : null,
-        audioUrl: this.#createAudioLink(hwi.prs[0])
-      },
-      et: et && typeof et[0][1] === "string" ? et[0][1] : null,
-      definitions: filtered.map(({ hwi, fl, def }) => {
-        return {
-          word: hwi.hw.replaceAll("*", ""),
-          part: fl,
-          sences: def
-            .map((d) =>
-              d.sseq
-                .flat()
-                .map((sequence) => {
-                  const [type, collection] = sequence
-
-                  if (type === "sense") {
-                    return this.#extractDefinitionsWithExamples(sequence)
-                  }
-
-                  if (type === "pseq") {
-                    // https://dictionaryapi.com/products/json#sec-2.pseq
-                    // bs (such as...) -> sense (1) (2) etc. (examples)
-                    return collection.map(this.#extractDefinitionsWithExamples)
-                  }
-
-                  // the rest is not important yet
-                  return null
-                })
-                .flat()
-                .filter((sense) => sense && sense.def)
-            )
-            .flat()
-        }
-      }),
-      runons: hasUros
-        ? uros.map(({ ure, prs, fl }) => ({
-            word: ure,
-            pronunciation: prs
-              ? {
-                  audioUrl: this.#createAudioLink(prs[0]),
-                  transcription: prs[0].mw
-                }
-              : null,
-            part: fl
-          }))
-        : null
+      pronunciation,
+      et: etymology,
+      definitions,
+      runons,
+      inflections: ins
     }
   }
 

@@ -19,12 +19,19 @@ export type MWDictionaryResponse = {
     sseq: Sseq
   }[]
   uros?: Uros
+  ins?: Inflections
 }[]
 
 type Uros = {
   ure: string
   prs?: Pronunciation
   fl: string
+}[]
+
+type Inflections = {
+  if: string
+  ifc?: string
+  il?: string
 }[]
 
 export type Pronunciation = {

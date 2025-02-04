@@ -1,5 +1,3 @@
-import type { Pronunciation } from "./mw/dictionary"
-
 export interface WordInformation {
   word: string
   pronunciation: {
@@ -27,4 +25,9 @@ export interface WordInformation {
     | null
   syns: string[] | null
   ants: string[] | null
+  inflections?: {
+    if: string
+    ifc?: string
+    il?: string
+  }[]
 }
