@@ -1,9 +1,34 @@
 import { useEffect, useState } from "react"
 
+import { CONFIG } from "~contents/config"
+
 const wordRegex = /^[a-zA-Z]+$/
 
 interface Props {
   element: HTMLElement | null
+}
+
+function calculatePopupPosition(rect: DOMRect) {
+  let x = rect.x
+  let y = rect.y + rect.height
+
+  const isWidthOverlay = x + CONFIG.popup.width > window.innerWidth
+  const isHeightOverlay = y + CONFIG.popup.height > window.innerHeight
+
+  if (isWidthOverlay) {
+    if (window.innerWidth > CONFIG.popup.width) {
+      const margin = (window.innerWidth - CONFIG.popup.width) / 2
+      x = margin
+    } else {
+      x = 0
+    }
+  }
+
+  if (isHeightOverlay) {
+    y = rect.y - CONFIG.popup.height
+  }
+
+  return { x, y }
 }
 
 export function useSelection({ element }: Props) {
@@ -32,15 +57,10 @@ export function useSelection({ element }: Props) {
             : element.contains(range.endContainer.parentElement)
 
         if (!isSelectedInsideExtension) {
-          const rect = range.getBoundingClientRect()
+          const selectedWordRect = range.getBoundingClientRect()
+          const position = calculatePopupPosition(selectedWordRect)
 
-          // TODO: for example, if clicked too right, the popup will not be visible, fix the positioning
-          const initialPopupPosition = {
-            x: rect.x,
-            y: rect.y + rect.height
-          }
-
-          setPosition(initialPopupPosition)
+          setPosition(position)
           setSelectedText(selectedText)
         }
       }

@@ -126,39 +126,41 @@ export class MerriamWebster {
     return this.#parseTokens(doubleTagsCleaned)
   }
 
-  static #extractDefinitionsWithExamples(sense: Sense | Bs) {
-    const [type, data] = sense
-
-    const extracted = type === "sense" ? data : data.sense
-
-    const definition = extracted.dt.find((dt) => dt[0] === "text")
-    const visualIllustration = extracted.dt.find((dt) => dt[0] === "vis")
-
-    const sdsenseDefinition = extracted?.sdsense?.dt.find(
-      (dt) => dt[0] === "text"
-    )[1]
-
-    const sdsenseText = sdsenseDefinition
-      ? `, ${extracted?.sdsense.sd}, ${sdsenseDefinition}`
-      : ""
-
-    if (!definition) {
-      return {
-        def: "",
-        examples: []
-      }
-    }
-
-    return {
-      def: this.#parseTokens(`${definition[1]}${sdsenseText}`),
-      examples: visualIllustration
-        ? visualIllustration[1].map((vis) => this.#parseTokens(vis.t))
-        : []
-    }
-  }
-
   static #transformDictionary(dictionary: MWDictionaryResponse) {
     const [{ hwi, et, fl, uros, ins }] = dictionary
+
+    const extractDefinitionsWithExamples = (sense: Sense | Bs) => {
+      const [type, data] = sense
+
+      const extracted = type === "sense" ? data : data.sense
+
+      const definition = extracted.dt.find((dt) => dt[0] === "text")
+      const visualIllustration = extracted.dt.find((dt) => dt[0] === "vis")
+
+      const sdsenseDefinition = extracted?.sdsense?.dt.find(
+        (dt) => dt[0] === "text"
+      )[1]
+
+      const sdsenseText = sdsenseDefinition
+        ? `, ${extracted?.sdsense.sd}, ${sdsenseDefinition}`
+        : ""
+
+      if (!definition) {
+        return {
+          def: "",
+          examples: []
+        }
+      }
+
+      const def = this.#parseTokens(`${definition[1]}${sdsenseText}`)
+
+      return {
+        def,
+        examples: visualIllustration
+          ? visualIllustration[1].map((vis) => this.#parseTokens(vis.t))
+          : []
+      }
+    }
 
     const normalizedWord = hwi.hw.replaceAll("*", "")
 
@@ -185,7 +187,7 @@ export class MerriamWebster {
         }))
       : null
 
-    const definitions = filtered.map(({ hwi, fl, def, ins }) => {
+    const definitions = filtered.map(({ hwi, fl, def }) => {
       return {
         word: hwi.hw.replaceAll("*", ""),
         part: fl,
@@ -197,13 +199,13 @@ export class MerriamWebster {
                 const [type, collection] = sequence
 
                 if (type === "sense") {
-                  return this.#extractDefinitionsWithExamples(sequence)
+                  return extractDefinitionsWithExamples(sequence)
                 }
 
                 if (type === "pseq") {
                   // https://dictionaryapi.com/products/json#sec-2.pseq
                   // bs (such as...) -> sense (1) (2) etc. (examples)
-                  return collection.map(this.#extractDefinitionsWithExamples)
+                  return collection.map(extractDefinitionsWithExamples)
                 }
 
                 // the rest is not important yet
