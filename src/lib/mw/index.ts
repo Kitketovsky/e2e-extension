@@ -172,20 +172,19 @@ export class MerriamWebster {
       )
     })
 
-    const hasUros = fl === "adjective" && uros
-
-    const runons = hasUros
-      ? uros.map(({ ure, prs, fl }) => ({
-          word: ure,
-          pronunciation: prs
-            ? {
-                audioUrl: this.#createAudioLink(prs[0]),
-                transcription: prs[0].mw
-              }
-            : null,
-          part: fl
-        }))
-      : null
+    const runons =
+      fl === "adjective" && uros
+        ? uros.map(({ ure, prs, fl }) => ({
+            word: ure.replaceAll("*", ""),
+            pronunciation: prs
+              ? {
+                  audioUrl: this.#createAudioLink(prs[0]),
+                  transcription: prs[0].mw
+                }
+              : null,
+            part: fl
+          }))
+        : null
 
     const definitions = filtered.map(({ hwi, fl, def }) => {
       return {
@@ -230,8 +229,7 @@ export class MerriamWebster {
       pronunciation,
       et: etymology,
       definitions,
-      runons,
-      inflections: ins
+      runons
     }
   }
 

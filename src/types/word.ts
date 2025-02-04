@@ -25,9 +25,4 @@ export interface WordInformation {
     | null
   syns: string[] | null
   ants: string[] | null
-  inflections?: {
-    if: string
-    ifc?: string
-    il?: string
-  }[]
 }

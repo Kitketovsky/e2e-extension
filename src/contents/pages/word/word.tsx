@@ -6,6 +6,7 @@ import type { WordInformation } from "~types/word"
 import { BadgesList } from "./components/badges-list"
 import { Definitions } from "./components/definitions"
 import { PlayAudioButton } from "./components/play-audio-btn"
+import { Runons } from "./components/runons"
 import { SaveDictionaryButton } from "./components/save-dictionary-btn"
 
 interface Props {
@@ -20,7 +21,14 @@ export const Word = ({ wordData, setSelectedText }: Props) => {
     return null
   }
 
-  const { word: spelling, definitions, pronunciation, ants, syns } = wordData
+  const {
+    word: spelling,
+    definitions,
+    pronunciation,
+    ants,
+    syns,
+    runons
+  } = wordData
 
   const { audioUrl, transcription } = pronunciation
 
@@ -31,7 +39,6 @@ export const Word = ({ wordData, setSelectedText }: Props) => {
   return (
     <TooltipProvider>
       <div ref={setWrapperEl} className="flex flex-col gap-4 text-sm h-full">
-        {/* Header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-col">
             <span className="font-bold text-2xl">{spelling}</span>
@@ -45,6 +52,8 @@ export const Word = ({ wordData, setSelectedText }: Props) => {
             <SaveDictionaryButton wordData={wordData} wrapperEl={wrapperEl} />
           </div>
         </div>
+
+        <Runons runons={runons} />
 
         <Definitions definitions={definitions} />
 
